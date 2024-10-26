@@ -22,24 +22,35 @@ import { paths } from '@/paths';
 import { authClient } from '@/lib/auth/client';
 import { useUser } from '@/hooks/use-user';
 
+import {createUserWithEmailAndPassword } from 'firebase/auth';
+import {auth} from '../../conf/firebase';
+// import {app} from '../../conf/dbFirebase';
+// import { getFirestore, doc, setDoc , collection} from 'firebase/firestore';
+// import { useList  } from "react-firebase-hooks/database";
+// import { ref, getDatabase , push, set } from 'firebase/database';
+
 const schema = zod.object({
-  firstName: zod.string().min(1, { message: 'First name is required' }),
-  lastName: zod.string().min(1, { message: 'Last name is required' }),
-  email: zod.string().min(1, { message: 'Email is required' }).email(),
-  password: zod.string().min(6, { message: 'Password should be at least 6 characters' }),
-  terms: zod.boolean().refine((value) => value, 'You must accept the terms and conditions'),
+  email: zod.string().min(1, { message: 'Email обязательное поле' }).email(),
+  password: zod.string().min(1, { message: 'Пароль обязательное поле' }),
 });
 
 type Values = zod.infer<typeof schema>;
 
-const defaultValues = { firstName: '', lastName: '', email: '', password: '', terms: false } satisfies Values;
+const defaultValues = { email: '', password: ''} satisfies Values;
+// const database = getDatabase(app);
 
 export function SignUpForm(): React.JSX.Element {
   const router = useRouter();
 
+  const [errorsSignUp, setErrorsSignUp] = React.useState<string>('');
+
+  // const [snapshots, loading, error] = useList(ref(database, 'list'));
+
   const { checkSession } = useUser();
 
   const [isPending, setIsPending] = React.useState<boolean>(false);
+
+  // const [snapshots, loading, error] = useList(collection(db, 'list'))
 
   const {
     control,
@@ -51,21 +62,37 @@ export function SignUpForm(): React.JSX.Element {
   const onSubmit = React.useCallback(
     async (values: Values): Promise<void> => {
       setIsPending(true);
-
-      const { error } = await authClient.signUp(values);
-
-      if (error) {
-        setError('root', { type: 'server', message: error });
+      const { email, password} = values;
+      try {
+        await createUserWithEmailAndPassword(auth, email, password);
+        // const newRef = push(ref(database, 'list')); // Создаем новый ключ
+        // await set(newRef, {
+        //   email,
+        //   chanelLink
+        // });
         setIsPending(false);
-        return;
+        window.location.href = '/auth/sign-in';
+      } catch (error) {
+        console.error("Ошибка регистрации:", error);
+        setIsPending(false);
       }
 
-      // Refresh the auth state
-      await checkSession?.();
-
-      // UserProvider, for this case, will not refresh the router
-      // After refresh, GuestGuard will handle the redirect
-      router.refresh();
+      setIsPending(false);
+      // console.log(values);
+      // const { error } = await authClient.signUp(values);
+      //
+      // if (error) {
+      //   setError('root', { type: 'server', message: error });
+      //   setIsPending(false);
+      //   return;
+      // }
+      //
+      // // Refresh the auth state
+      // await checkSession?.();
+      //
+      // // UserProvider, for this case, will not refresh the router
+      // // After refresh, GuestGuard will handle the redirect
+      // router.refresh();
     },
     [checkSession, router, setError]
   );
@@ -73,45 +100,33 @@ export function SignUpForm(): React.JSX.Element {
   return (
     <Stack spacing={3}>
       <Stack spacing={1}>
-        <Typography variant="h4">Sign up</Typography>
+        <Typography variant="h4">Регистрация</Typography>
         <Typography color="text.secondary" variant="body2">
-          Already have an account?{' '}
+          Уже есть аккаунт?{' '}
           <Link component={RouterLink} href={paths.auth.signIn} underline="hover" variant="subtitle2">
-            Sign in
+            Вход
           </Link>
         </Typography>
       </Stack>
       <form onSubmit={handleSubmit(onSubmit)}>
         <Stack spacing={2}>
-          <Controller
-            control={control}
-            name="firstName"
-            render={({ field }) => (
-              <FormControl error={Boolean(errors.firstName)}>
-                <InputLabel>First name</InputLabel>
-                <OutlinedInput {...field} label="First name" />
-                {errors.firstName ? <FormHelperText>{errors.firstName.message}</FormHelperText> : null}
-              </FormControl>
-            )}
-          />
-          <Controller
-            control={control}
-            name="lastName"
-            render={({ field }) => (
-              <FormControl error={Boolean(errors.firstName)}>
-                <InputLabel>Last name</InputLabel>
-                <OutlinedInput {...field} label="Last name" />
-                {errors.firstName ? <FormHelperText>{errors.firstName.message}</FormHelperText> : null}
-              </FormControl>
-            )}
-          />
+          {/*<Controller*/}
+          {/*  control={control}*/}
+          {/*  name="chanelLink"*/}
+          {/*  render={({ field }) => (*/}
+          {/*    <FormControl>*/}
+          {/*      <InputLabel>Ссылка на канал</InputLabel>*/}
+          {/*      <OutlinedInput {...field} label="Ссылка на канал" />*/}
+          {/*    </FormControl>*/}
+          {/*  )}*/}
+          {/*/>*/}
           <Controller
             control={control}
             name="email"
             render={({ field }) => (
               <FormControl error={Boolean(errors.email)}>
-                <InputLabel>Email address</InputLabel>
-                <OutlinedInput {...field} label="Email address" type="email" />
+                <InputLabel>Email</InputLabel>
+                <OutlinedInput {...field} label="Email" type="email" />
                 {errors.email ? <FormHelperText>{errors.email.message}</FormHelperText> : null}
               </FormControl>
             )}
@@ -121,36 +136,36 @@ export function SignUpForm(): React.JSX.Element {
             name="password"
             render={({ field }) => (
               <FormControl error={Boolean(errors.password)}>
-                <InputLabel>Password</InputLabel>
-                <OutlinedInput {...field} label="Password" type="password" />
+                <InputLabel>Пароль</InputLabel>
+                <OutlinedInput {...field} label="Пароль" type="password" />
                 {errors.password ? <FormHelperText>{errors.password.message}</FormHelperText> : null}
               </FormControl>
             )}
           />
-          <Controller
-            control={control}
-            name="terms"
-            render={({ field }) => (
-              <div>
-                <FormControlLabel
-                  control={<Checkbox {...field} />}
-                  label={
-                    <React.Fragment>
-                      I have read the <Link>terms and conditions</Link>
-                    </React.Fragment>
-                  }
-                />
-                {errors.terms ? <FormHelperText error>{errors.terms.message}</FormHelperText> : null}
-              </div>
-            )}
-          />
+          {/*<Controller*/}
+          {/*  control={control}*/}
+          {/*  name="terms"*/}
+          {/*  render={({ field }) => (*/}
+          {/*    <div>*/}
+          {/*      <FormControlLabel*/}
+          {/*        control={<Checkbox {...field} />}*/}
+          {/*        label={*/}
+          {/*          <React.Fragment>*/}
+          {/*            I have read the <Link>terms and conditions</Link>*/}
+          {/*          </React.Fragment>*/}
+          {/*        }*/}
+          {/*      />*/}
+          {/*      {errors.terms ? <FormHelperText error>{errors.terms.message}</FormHelperText> : null}*/}
+          {/*    </div>*/}
+          {/*  )}*/}
+          {/*/>*/}
           {errors.root ? <Alert color="error">{errors.root.message}</Alert> : null}
           <Button disabled={isPending} type="submit" variant="contained">
-            Sign up
+            Зарегистрироваться
           </Button>
         </Stack>
       </form>
-      <Alert color="warning">Created users are not persisted</Alert>
+      <Alert color="warning">Из-за большого количества заявок срок интеграции может достигать до 2х дней</Alert>
     </Stack>
   );
 }

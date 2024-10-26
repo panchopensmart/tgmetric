@@ -6,11 +6,11 @@ import { MagnifyingGlass as MagnifyingGlassIcon } from '@phosphor-icons/react/di
 
 export function CompaniesFilters(): React.JSX.Element {
   return (
-    <Card sx={{ p: 2 }}>
+    <Card sx={{ p: 2, width: '100%'}}>
       <OutlinedInput
         defaultValue=""
         fullWidth
-        placeholder="Search integration"
+        placeholder="Поиск интеграций"
         startAdornment={
           <InputAdornment position="start">
             <MagnifyingGlassIcon fontSize="var(--icon-fontSize-md)" />
